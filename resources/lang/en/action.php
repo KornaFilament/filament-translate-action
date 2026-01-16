@@ -6,7 +6,7 @@ return [
     'notifications' => [
         'success' => [
             'title' => 'Translations updated',
-            'body' => ':records field(s) have been translated. Please review the translation and save the specification.',
+            'body' => ':fields field(s) have been translated. Please review the translation and save the specification.',
         ],
 
         'error' => [

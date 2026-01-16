@@ -30,6 +30,8 @@ class TranslateAction extends Action
 
     protected function setUp(): void
     {
+        parent::setUp();
+
         $this
             ->icon('heroicon-o-language')
             ->label(__('filament-translate-action::action.label'))
@@ -37,12 +39,13 @@ class TranslateAction extends Action
             ->hidden(function (Page $livewire, $action) {
                 return $livewire->activeLocale == $action->sourceLocale;
             })
-            ->action(function (Page $livewire) {
-                $this->record = $livewire->getRecord();
+            ->action(function (Page $livewire, $record) {
+                $sourceLocale = $this->sourceLocale;
+                $targetLocale = $livewire->activeLocale;
 
                 $translate = new TranslateModelAction(
-                    sourceLocale: $this->sourceLocale,
-                    targetLocale: $livewire->activeLocale,
+                    sourceLocale: $sourceLocale,
+                    targetLocale: $targetLocale,
                     apiKey: static::$apiKey,
                 );
 
@@ -50,19 +53,21 @@ class TranslateAction extends Action
                  * @var Model $record
                  */
                 try {
-                    $record = $translate($this->record);
+                    $record = $translate($record);
                 } catch (RequestException|ConnectionException $e) {
                     $this->exception = $e;
-                    $this->sendFailureNotification();
+                    $this->failure();
 
                     return;
                 }
 
-                $livewire->form->fill(
-                    $record->toArrayWithLocale($livewire->activeLocale)
-                );
+                $attributes = $record->toArray();
 
-                $this->sendSuccessNotification();
+                foreach ($record->getTranslatableAttributes() as $field) {
+                    $attributes[$field] = $record->getTranslation($field, $targetLocale);
+                }
+
+                $livewire->form->fill($attributes);
             });
     }
 
@@ -93,7 +98,7 @@ class TranslateAction extends Action
         Notification::make()
             ->title(__('filament-translate-action::action.notifications.success.title'))
             ->body(__('filament-translate-action::action.notifications.success.body', [
-                'fields' => count($this->record->getDirty()),
+                'fields' => count($this->getRecord()->getDirty()),
             ]))
             ->success()
             ->send();
